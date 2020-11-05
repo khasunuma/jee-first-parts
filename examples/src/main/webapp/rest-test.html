@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>REST Test</title>
+</head>
+<body>
+<h2>REST Test</h2>
+<p>Send GET or POST request to the test resource.
+<h3>HTTP GET Test</h3>
+<p><a href="/examples/app/some?id=1">GET /examples/app/some?id=1</a></p>
+<p>or</p>
+<form name="form1" action="/examples/app/some" method="get">
+<p>id: <input type="text" name="id" required> <input type="submit" name="submit" value="Send"></p>
+</form>
+<h3>HTTP POST Test</h3>
+<p>POST /example/app/some</p>
+<form name="form2" action="/examples/app/some" method="post">
+<p>id: <input type="text" name="data" required> <input type="submit" name="submit" value="Send"></p>
+</form>
+</body>
+</html>

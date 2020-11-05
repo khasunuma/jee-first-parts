@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Param Test</title>
+</head>
+<body>
+<h2>Param Test</h2>
+<h3>@QueryParam</h3>
+<ul>
+<li><a href="/examples/app/param/query?id=1&lang=ja">GET /examples/app/param/query?id=1&amp;lang=ja</a></li>
+<li><a href="/examples/app/param/query?id=2">GET /examples/app/param/query?id=2</a></li>
+<li><a href="/examples/app/param/query?lang=ja">GET /examples/app/param/query?lang=ja</a></li>
+<li><a href="/examples/app/param/query">GET /examples/app/param/query</a></li>
+</ul>
+
+<h3>@FormParam</h3>
+<ul>
+<li>POST /examples/app/param/form</li>
+</ul>
+<div style="margin-left: 2.5em;">
+<form action="/examples/app/param/form" method="post">
+<p>name: <input type="text" name="name"></p>
+<p>email: <input type="text" name="email"></p>
+<p><input type="submit" name="submit" value="Send"></p> 
+</form>
+</div>
+
+<h3>@PathParam</h3>
+<ul>
+<li><a href="/examples/app/param/path/id">GET /examples/app/param/path/id</a></li>
+<li><a href="/examples/app/param/path/list">GET /examples/app/param/path/list</a></li>
+</ul>
+
+<h3>@HeaderParam</h3>
+<ul>
+<li><a href="/examples/app/param/header">GET /examples/app/param/header</a></li>
+</ul>
+<p style="font-style: italic;">Note: "Host" header is attached at least as HTTP 1.1 requirement</p>
+
+<h3>@CookieParam</h3>
+<p style="font-style: italic;">Note: no example - similar with <code>@HeaderParam</code></p>
+
+<h3>@MatrixParam</h3>
+<ul>
+<li><a href="/examples/app/param/matrix;x=965.2;y=961.2;z=891.2">GET /examples/app/param/matrix;x=965.2;y=961.2;z=891.2</a></li>
+<li><a href="/examples/app/param/matrix;x=965.2;y=961.2">GET /examples/app/param/matrix;x=965.2;y=961.2</a></li>
+<li><a href="/examples/app/param/matrix;x=965.2;z=891.2">GET /examples/app/param/matrix;x=965.2;z=891.2</a></li>
+<li><a href="/examples/app/param/matrix;y=961.2;z=891.2">GET /examples/app/param/matrix;y=961.2;z=891.2</a></li>
+<li><a href="/examples/app/param/matrix;x=965.2">GET /examples/app/param/matrix;x=965.2</a></li>
+<li><a href="/examples/app/param/matrix;y=961.2">GET /examples/app/param/matrix;y=961.2</a></li>
+<li><a href="/examples/app/param/matrix;z=891.2">GET /examples/app/param/matrix;z=891.2</a></li>
+<li><a href="/examples/app/param/matrix">GET /examples/app/param/matrix</a></li>
+</ul>
+
+</body>
+</html>
