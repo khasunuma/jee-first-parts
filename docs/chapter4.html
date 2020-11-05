@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>4. MicroProfile Config - 環境依存の値を外部へ切り出す | Jakarta EE: The First Parts</title>
+<link rel="stylesheet" href="styles/std.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.3.2/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.3.2/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+<body>
+<nav>
+[ <a href="chapter3.html">前の章へ</a> | <a href="index.html">インデックス</a> ]
+</nav>
+<h2>4. MicroProfile Config - 環境依存の値を外部へ切り出す</h2>
+<p>MicroProfile Config は、環境に依存する設定値をアプリケーション本体から分離する機能を提供します。同種の API は Jakarta EE の前身である Java EE 8 の策定段階で導入が検討された (<a href="https://jcp.org/en/jsr/detail?id=382">JSR 382</a> ; MicroProfile Config 1.0 として採用された仕様と同一) ものの断念された経緯があります。</p>
+<p>MicroProfile Config を使用するには、pom.xml に以下の依存関係記述を追加してください。</p>
+<pre><code class="xml">&lt;dependency&gt;<br>  &lt;groupId&gt;org.eclipse.microprofile.config&lt;/groupId&gt;<br>  &lt;artifactId&gt;microprofile-config-api&lt;/artifactId&gt;<br>  &lt;version&gt;1.4&lt;/version&gt;<br>  &lt;scope&gt;provided&lt;/scope&gt;<br>&lt;/dependency&gt;</code></pre>
+<p>あるいは、MicroProfile 全体を取り込む以下の依存関係を用いても構いません。</p>
+<pre><code class="xml">&lt;dependency&gt;<br>  &lt;groupId&gt;org.eclipse.microprofile&lt;/groupId&gt;<br>  &lt;artifactId&gt;microprofile&lt;/artifactId&gt;<br>  &lt;version&gt;3.3&lt;/version&gt;<br>  &lt;scope&gt;provided&lt;/scope&gt;<br>&lt;/dependency&gt;</code></pre>
+<p>依存関係を追加した後、クラス・パス上の META-INF ディレクトリ以下に microprofile-config.properties というプロパティ・ファイル (設定値がない場合は空のファイルでも構いません) を置いてください。</p>
+<p>MicroProfile Config では、設定値を Config ソースと呼ばれる領域から取得します。標準では、システム・プロパティ、環境変数、microprofile-config.properties が Config ソースとなっています。カスタムの Config ソースを作成して、データベースやファイルシステムなどを使用することも可能です。MicroProfile ランタイムによってはいくつかのカスタム Config ソースがあらかじめ組み込まれている場合もあります。</p>
+<p>MicroProfile Config は CDI と組み合わせることでコーディングを容易にすることができます。以下に CDI 連携の例を取り上げますが、通常は CDI 連携を使用するのがベストでしょう。</p>
+<pre><code class="java">import javax.enterprise.context.RequestScoped;
+import javax.inject.Inject;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import com.poortoys.jeefirstparts.htmlhelper.HtmlTemplate;
+
+@Path("config")
+@RequestScoped
+public class ConfigTestResource {
+
+    @Inject
+    @ConfigProperty(name = "HOME")
+    private String home;
+
+    @Inject
+    @ConfigProperty(name = "USERPROFILE")
+    private String userprofile;
+
+    @Inject
+    @ConfigProperty(name = "jeefirstparts.hello")
+    private String hello;
+
+    @Inject
+    @ConfigProperty(name = "jeefirstparts.message")
+    private String message;
+
+    @Inject
+    @ConfigProperty(name = "jeefirstparts.nothing", defaultValue = "N/A")
+    private String nothing;
+
+    @GET
+    @Produces("text/html")
+    public String get() {
+        HtmlTemplate template = HtmlTemplate.create();
+        template.setTitle("MicroProfile Config Test");
+
+        StringBuilder body = new StringBuilder();
+        body.append("&lt;p&gt;HOME = &lt;strong&gt;").append(home).append("&lt;/strong&gt;&lt;/p&gt;\n");
+        body.append("&lt;p&gt;USERPROFILE = &lt;strong&gt;").append(userprofile).append("&lt;/strong&gt;&lt;/p&gt;\n");
+        body.append("&lt;p&gt;jeefirstparts.hello = &lt;strong&gt;").append(hello).append("&lt;/strong&gt;&lt;/p&gt;\n");
+        body.append("&lt;p&gt;jeefirstparts.message = &lt;strong&gt;").append(message).append("&lt;/strong&gt;&lt;/p&gt;\n");
+        body.append("&lt;p&gt;jeefirstparts.nothing = &lt;strong&gt;").append(nothing).append("&lt;/strong&gt;&lt;/p&gt;\n");
+        template.setBody(body);
+
+        return template.toString();
+    }
+
+}</code></pre>
+<p>設定値は @ConfigProperty アノテーションを追加したインジェクション・ポイント (@Inject アノテーションと @ConfigProperty アノテーションの併用) に設定されます。名称は @ConfigProperty の name 属性で指定します。</p>
+<p>@ConfigProperty で指定した名称の設定値をいずれかの Config ソースから取得します。設定値が複数の Config ソースに存在する場合には、優先度の値が大きい Config ソースが優先されます。</p>
+<ol>
+  <li>システム・プロパティ (優先度: 400)</li>
+  <li>環境変数 (優先度: 300)</li>
+  <li>microprofile-config.properties (優先度: 100)</li>
+</ol>
+<p>環境変数の名称には . (ドット) を含めることができない場合があります。その場合には、. (ドット) の代わりに _ (アンダーバー) を使用します。例えば、jeefirstparts.hello に相当する環境変数名は jeefirstparts_hello となります。</p>
+<p>設定値は Config ソース側では文字列になりますが、アプリケーション側では文字列の他に変換可能であれば数値等として受け取ることが可能です。変換可能なデータ形式は API 仕様のアップデートによりよく使われるものが追加されており、またカスタムで定義することも可能となっています。少なくとも数値に関しては初期のバージョンから使用できると考えて良いでしょう。</p>
+<p><a href="https://download.eclipse.org/microprofile/microprofile-config-1.4/microprofile-config-spec.html">MicroProfile Config の仕様書</a>は記述が平易で、かつ具体例が数多く掲載されています。ガイドブックとして手元に置いて活用してください。</p>
+<nav>
+[ <a href="chapter3.html">前の章へ</a> | <a href="index.html">インデックス</a> ]
+</nav>
+</body>
+</html>

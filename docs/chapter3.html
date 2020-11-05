@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>3. Jakarta DI/CDI - 複雑なものは分解しよう | Jakarta EE: The First Parts</title>
+<link rel="stylesheet" href="styles/std.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.3.2/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.3.2/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+<body>
+<nav>
+[ <a href="chapter2.html">前の章へ</a> | <a href="index.html">インデックス</a> | <a href="chapter4.html">次の章へ</a> ]
+</nav>
+<h2>3. Jakarta DI/CDI - 複雑なものは分解しよう</h2>
+<h3><a name="sec3-1"></a>3.1. Jakarta CDI とは？</h3>
+<p>Jakarta EE による Web アプリケーション開発は、極論すると Jakarta REST のリソース・クラスにすべての処理を詰め込めば実現は可能です。しかし、メソッドの実装が複雑怪奇なものになってしまうため、通常はいくつかのコンポーネントに分けて管理します。</p>
+<p>コンポーネントとしては、以下のようなものが挙げられます。</p>
+<ul>
+  <li>ユーザー・インタフェース</li>
+  <li>ビジネスロジック</li>
+  <li>データベースなどの外部インタフェース</li>
+  <li>構造体メモリ</li>
+</ul>
+<p>Java ではこれらを複数のクラスに分割し、new 演算子によってインスタンス化します。Jakarta CDI は、こういったコンポーネントを new 演算子を直接使用せずに疎結合して使用するための技術です。</p>
+<p>Jakarta CDI は new 演算子の代わりにランタイム側 (Bean Manager と呼びます) がインスタンスを自動的に生成します。最初のうちはあまり直感的ではないと思いますが、new 演算子では実現できないような「凝ったこと」も実現可能です。そして、業務アプリケーションの開発ではその「凝ったこと」がしばしば必要になります。</p>
+<p>Jakarta CDI を使うことのメリットについて挙げます。</p>
+<ul>
+  <li>コンポーネントを適切なサイズに分割することができます。</li>
+  <li>状況に応じて通常とは異なる &quot;Alternative&quot; なインスタンスを使うことができます。例えば、テスト環境ではスタブを使用するといった感じです。</li>
+  <li>異なるライフサイクルを持つコンポーネントを組み合わせて使うことができます。このライフサイクルのことをスコープと呼びますが、例えば、各リクエストごとに生成される @RequestScoped、HTTP セッションを通じて維持される @SessionScoped、アプリケーションの開始から終了まで存在する @ApplicationScoped などのスコープが用意されています。new 演算子を使用した場合はすべて呼び出し元のライフサイクルに依存してしまうのですが、CDI を使用すると呼び出し元よりも呼び出し先が長く存在できるように設計することが可能です。</li>
+  <li>前処理・後処理を暗黙的に呼び出すことができます。CDI ではこれをインターセプターと呼びますが、主要な処理と共通の前処理・後処理を分離するのに役立ちます。Jakarta EE では標準で @Transactional というインターセプターが用意されており、これを使用するとメソッド呼び出しで暗黙的なトランザクションを実現することが可能です。</li>
+</ul>
+<p>下 2 つのメリットについては、new 演算子では実現できない、CDI ならではの特色となります。</p>
+<h3><a name="sec3-2"></a>3.2. Dependency Injection</h3>
+<p>CDI の実際を、コード例を示しながら見てゆきます。</p>
+<pre><code class="java">import javax.enterprise.context.RequestScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
+
+@Named
+@RequestScoped
+public class CdiBean1 {
+
+    @Inject
+    CdiBean2 bean2;
+
+    public void compute() {
+        bean2.execute();
+    }
+
+}
+</code></pre>
+<pre><code class="java">import javax.enterprise.context.RequestScoped;
+import javax.inject.Named;
+
+@Named
+@RequestScoped
+public class CdiBean2 {
+
+    public String execute() {
+        return "executed by CdiBean2";
+    }
+
+}</code></pre>
+<p>CDI においては、各コンポーネントのことを CDI Bean と呼びます。ここでは 2 つの CDI Bean、CdiBean1 および CdiBean2 を挙げています。それぞれのコードで、@Named というアノテーションは &quot;Qualifier&quot; と呼ばれ、そのクラスが CDI Bean であることを示します。@Named は標準で用意されている &quot;Qualifier&quot; で「名前付きの CDI Bean」を意味しますが、コード上でそれぞれの CDI Bean の役割を明確にするため、独自の &quot;Qualifier&quot; を作成することも可能です。</p>
+<p>その次に @RequestScoped という &quot;Scope&quot; を示すアノテーションが付加されています。これにより、これらの CDI Bean はリクエストごとにインスタンスが生成されるようになります。</p>
+<p>CdiBean1 には @Inject アノテーションが付加されたフィールドがあります。これはインジェクション・ポイントと呼ばれ、他の CDI Bean のインスタンスが Bean Manager によって設定される箇所を示します。new 演算子でインスタンスを作成する代わりに、@Inject アノテーションでインジェクションポイントを示すことにより Bean Manager が自動的にインスタンスを作成してくれます。</p>
+<p>インジェクション・ポイントには、実装クラスだけでなく、そのスーパークラスやインタフェースを指定することができます。また、前節で取り上げたインターセプターは、実装クラスのサブクラスを自動生成して共通処理を埋め込むようになっています。上記の CdiBean2 に &quot;Interceptor&quot; を設定した場合は、CdiBean1 のインジェクション・ポイントには CdiBean2 ではなく自動生成したサブクラスが設定されます。このような仕組みから、CDI Bean は Bean Manager によってサブクラスを自動生成する場合があります。そのため、CDI Bean のクラスまたはそのインスタンス・フィールド / メソッドを final 宣言してしまうと、サブクラスを自動生成できずにエラーとなってしまう場合があることに注意してください。</p>
+<p>@Named &quot;Qualifier&quot; および @Inject インジェクション・ポイントによる Dependency Injection は、Jakarta DI という別個の API で規定されているものです (Jakarta DI は JSR 330 とも呼ばれ、Java における標準的な Dependency Injection のインタフェース仕様として、Jakarta EE を初めとする様々なフレームワークで採用されています)。CDI は DI を拡張し、きめ細かなコンポーネント管理を実現するための API となっています。</p>
+<h3><a name="sec3-3"></a>3.3. スコープ</h3>
+<p>CDI Bean はそれぞれインスタンスの生存期間を指定することができます。CDI は Contexts and Dependency Injection の略ですが、&quot;Contexts&quot; がスコープ管理機能を意味しています。CDI ではいくつかのスコープを提供していますが、ここでは基本的な 3 種類について説明します。</p>
+<h4>3.3.1. リクエスト・スコープ</h4>
+<p>CDI Bean に @RequestScoped アノテーションを付加すると、その CDI Bean はリクエスト・スコープとなります。リクエスト・スコープの CDI Bean は、リクエスト事にインスタンスが生成されます (リクエスト終了時にインスタンスは破棄されます)。</p>
+<p>以下にリクエスト・スコープの CDI Bean である RequestScopedBean を挙げます。RequestScopedBean のインスタンスはリクエストのたびに生成・破棄が行われるため、インスタンス・フィールド count の内容は、リクエストのたびに初期化されます。</p>
+<p>特別な要求がない場合には、CDI Bean はリクエスト・スコープにしておくのが無難でしょう。</p>
+<pre><code class="java">import javax.enterprise.context.RequestScoped;
+import javax.inject.Named;
+
+@Named
+@RequestScoped
+public class RequestScopedBean {
+
+    private int count;
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+}</code></pre>
+<h4>3.3.2. セッション・スコープ</h4>
+<p>CDI Bean に @SessionScoped アノテーションを付加すると、その CDI Bean はセッション・スコープとなります。セッション・スコープの CDI Bean は、複数の HTTP リクエストにまたがって存在することが可能で、HTTP セッション終了時に破棄されます。</p>
+<p>以下にセッション・スコープの CDI Bean である SessionScopedBean を挙げます。SessionScopedBean のインスタンスはセッション終了 (例: Web ブラウザ終了) まで破棄されないため、インスタンス・フィールド count の内容は、複数のリクエストに渡って保持されます。</p>
+<p>セッション・スコープの CDI Bean は、HTTP セッション終了までその内容を (メモリ等のストア上に) 保持する必要があることから、<strong>シリアライズ可能</strong>である (java.io.Serializable インタフェースを実装する) 必要があります。</p>
+<pre><code class="java">import java.io.Serializable;
+
+import javax.enterprise.context.SessionScoped;
+import javax.inject.Named;
+
+@Named
+@SessionScoped
+public class SessionScopedBean implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private int count;
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+}</code></pre>
+<h4>3.3.3. アプリケーション・スコープ</h4>
+<p>CDI Bean に @ApplicationScoped アノテーションを付加すると、その CDI Bean はアプリケーション・スコープとなります。アプリケーション・スコープの CDI Bean は、アプリケーション終了までその内容が保持されます。ただし、いわゆる「シングルトン」と異なり、インスタンスは複数存在する場合もあり得ます。</p>
+<p>以下にアプリケーション・スコープの CDI Bean である ApplicationScopedBean を挙げます。ApplicationScopedBean のインスタンスはアプリケーション終了まで破棄されないため、インスタンス・フィールド count の内容は、複数のリクエストおよびセッションに渡って保持されます。</p>
+<p>セッション・スコープと異なり、アプリケーション・スコープはシリアライズ可能でなくても構いません。</p>
+<pre><code class="java">import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Named;
+
+@Named
+@ApplicationScoped
+public class ApplicationScopedBean {
+
+    private int count;
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+}</code></pre>
+<h4>3.3.4. @Dependent 疑似スコープ</h4>
+<p>CDI Bean に @Dependent アノテーションを付加すると、その CDI Bean のスコープはインジェクション・ポイントに依存するようになります。すなわち、同じ CDI Bean であっても、インジェクション・ポイントがリクエスト・スコープの CDI Bean である場合にはリクエスト・スコープ、セッション・スコープの CDI Bean である場合にはセッション・スコープとなります。</p>
+<p>@Dependent アノテーションを付加した場合には、インジェクション・ポイントによってはセッション・スコープになる場合があります。そのため、CDI Bean は念のためにシリアライズ可能に実装しておいた方が良いでしょう。</p>
+<h3><a name="sec3-4"></a>3.4. Jakarta REST と CDI の連携</h3>
+<p>Jakarta REST のリソース・クラスは、そのままでは @Inject アノテーションによるインジェクション・ポイントを設定することができません。ただし、以下の CdiRestResource クラスのように @RequestScoped アノテーション (または、その他のスコープ) を付加することにより、そのリソース・クラスは CDI Bean も兼ねるようになります。一度リソース・クラスを CDI Bean にしてしまえば、CDI の作法に則ってインジェクション・ポイントを任意に設定できます。</p>
+<pre><code class="java">import javax.enterprise.context.RequestScoped;
+import javax.inject.Inject;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+
+@Path("cdi-rest")
+@RequestScoped
+public class CdiRestResource {
+
+    @Inject
+    CdiBean2 bean;
+
+    @GET
+    @Produces("text/html")
+    public String handle() {
+        String value = bean.execute();
+
+        return "&lt;!doctype html&gt;" 
+            + "&lt;html&gt;" 
+            + "&lt;head&gt;" 
+            + "&lt;title&gt;CDI-REST Integration Test Result&lt;/title&gt;" 
+            + "&lt;/head&gt;"
+            + "&lt;body&gt;" 
+            + "&lt;h1&gt;CDI-REST Integration Test Result&lt;/h1&gt;" 
+            + "&lt;p&gt;Obtained value: &lt;strong&gt;" + value + "&lt;/strong&gt;&lt;/p&gt;" 
+            + "&lt;/body&gt;"
+            + "&lt;/html&gt;";
+    }
+
+}</code></pre>
+<p>なお、リソース・クラスに @Named は付加されていませんが、それでも CDI Bean として動作します。@Named は「名前付き」の CDI Bean であることを示していますが、リソース・クラスのインスタンスは他の CDI Bean に設定するようなことはありませんので、名無しであっても構わないわけです。</p>
+<p>少なくとも Jakarta REST と CDI の連携を覚えれば、現実的なレベルで Web アプリケーションの開発ができるようになります。</p>
+<p><br>
+</p>
+<nav>
+[ <a href="chapter2.html">前の章へ</a> | <a href="index.html">インデックス</a> | <a href="chapter4.html">次の章へ</a> ]
+</nav>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>1. Jakarta EE アプリケーションの main メソッドはどこにある？ | Jakarta EE: The First Parts</title>
+<link rel="stylesheet" href="styles/std.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.3.2/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.3.2/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+<body>
+<nav>
+[ <a href="index.html">インデックス</a> | <a href="chapter2.html">次の章へ</a> ]
+</nav>
+<h2>1. Jakarta EE イントロダクション</h2>
+<h3><a name="sec1-1"></a>1.1. Jakarta EE アプリケーションの main メソッドはどこにある？</h3>
+<p>Jakarta EE アプリケーションは「アプリケーション」と銘打ってはいますが、実は main メソッドが含まれていません。それでは、どこに main メソッドがあるのかというと、Jakarta EE のランタイムのほうに含まれています。</p>
+<p>Jakarta EE のランタイムとアプリケーションは合体することにより Java アプリケーションとして動作します (Figure 1.1)。</p>
+<figure>
+  <img src="images/jee-structure.png" width="960" alt=""/>
+  <figcaption>Figure 1.1 - Jakarta EE ランタイムおよびアプリケーションの構造</figcaption>
+</figure>
+<h3><a name="sec1-2"></a>1.2. Jakarta EE アプリケーションの起動シーケンス</h3>
+<p>Jakarta EE アプリケーションが起動するまでの状態について、順を追って説明してゆきます。</p>
+<p>最初の状態は Jakarta EE ランタイムが停止しています。この状態では、ユーザーからのリクエストを受け付けることも、データベースなど外部システムと接続することもできません (Figure 1.2)。</p>
+<figure>
+  <img src="images/jee-stopped.png" width="960" alt=""/>
+  <figcaption>Figure 1.2 - Jakarta EE ランタイム停止状態</figcaption>
+</figure>
+<p>次に、Jakarta EE ランタイムの main メソッドを呼び出します (Figure 1.3)。</p>
+<figure>
+  <img src="images/jee-boot.png" width="960" alt=""/>
+  <figcaption>Figure 1.3 - Jakarta EE ランタイムの起動 (main メソッド呼び出し)</figcaption>
+</figure>
+<p>これでランタイムの HTTP サーバーや外部接続のリソースが起動して、ユーザーからのリクエストやデータベースなどへの接続をする準備が整いました。ただ、この状態ではまだアプリケーションとして動作する状態には至っていません (Figure 1.4)。</p>
+<figure>
+  <img src="images/jee-startup.png" width="960" alt=""/>
+  <figcaption>Figure 1.4 - Jakarta EE ランタイムの起動 (サーバーおよびリソース・アダプターの開始)</figcaption>
+</figure>
+<p>その後、Jakarta EE アプリケーションをランタイムに結合させます。この操作をデプロイと呼んでいますが、デプロイによってアプリケーションがランタイムと一体になり、これではじめてアプリケーションとして動作するようになります (Figure 1.5)。</p>
+<figure>
+  <img src="images/jee-deploy.png" width="960" alt=""/>
+  <figcaption>Figure 1.5 - Jakarta EE アプリケーションのデプロイ</figcaption>
+</figure>
+<p>アプリケーションのデプロイが成功すると、ユーザーからのリクエストを受け付け、データベース等の外部システムと連携して動作するようになります (Figure 1.6)。</p>
+<figure>
+  <img src="images/jee-running.png" width="960" alt=""/>
+  <figcaption>Figure 1.6 - Jakarta EE アプリケーションの起動 (サービス開始)</figcaption>
+</figure>
+<p>以上が Jakarta EE アプリケーションの動作原理となりますが、Jakarta EE に限らずサーバーサイド Java のフレームワークは概ね似たような仕組みとなっています。</p>
+<h3><a name="sec1-3"></a>1.3. Jakarta EE アプリケーション開発</h3>
+<p>Jakarta EE アプリケーション開発では、基本的には Maven のプロジェクトとして作成することが推奨されています (必要なライブラリ等も Maven の使用を前提として用意されています)。Gradle 等、他のビルド・ツールを使用する場合には、コミュニティ有志の情報源を参照してください。</p>
+<p>主要な IDE では、Maven プロジェクトが標準でサポートされています。まず、pom.xml 上で Java コンパイラの source / target バージョンを適切な値に設定します。</p>
+<ul>
+  <li>原則として Java コンパイラの source / target バージョンを 8 に設定します。これは現行バージョン Jakarta EE 8 と次期バージョン Jakarta EE 9 が Java 8 をサポートするためです。
+  ただし、使用する Jakarta EE ランタイムが Java 9 以上のバージョンをサポートする場合 (※ Open Liberty、Payara Server、WildFly の各最新バージョンはいずれも Java 11 をサポートします) には、それ以上の値を設定することも可能です。</li>
+  <li>将来リリース予定の Jakarta EE 9.1 に準拠するアプリケーションでは、Java コンパイラの source / target バージョンを 11 に設定します。</li>
+</ul>
+<p>次に、以下に示す依存関係を含めます。これだけで Jakarta EE が提供する API をすべてアプリケーション側から参照できるようになります。</p>
+<pre><code class="xml">&lt;dependency&gt;<br>  &lt;groupId&gt;jakarta.platform&lt;/groupId&gt;<br>  &lt;artifactId&gt;jakarta.jakartaee-api&lt;/artifactId&gt;<br>  &lt;version&gt;8.0.0&lt;/version&gt;<br>  &lt;scope&gt;provided&lt;/scope&gt;<br>&lt;/dependency&gt;</code></pre>
+<p>Jakarta EE Platform の軽量なサブセットである Jakarta EE Web Profile を使用する場合は、上記に代えて以下の依存関係記述を使用します。</p>
+<pre><code class="xml">&lt;dependency&gt;<br>  &lt;groupId&gt;jakarta.platform&lt;/groupId&gt;<br>  &lt;artifactId&gt;jakarta.jakartaee-web-api&lt;/artifactId&gt;<br>  &lt;version&gt;8.0.0&lt;/version&gt;<br>  &lt;scope&gt;provided&lt;/scope&gt;<br>&lt;/dependency&gt;</code></pre>
+<p>2020 年 11 月現在、Jakarta EE 9 のプレビュー版 (Milestone 3) がリリースされています。一部のランタイム (Eclipse GlassFish 6.0.0 RC2、Open Liberty 20.0.0.12-beta、Payara Server Community 5.2020.5) ではこれを先行的にサポートしています。Jakarta EE 9 を試用したい場合には以下の依存関係記述を用いてください。</p>
+<pre><code class="xml">&lt;dependency&gt;<br>  &lt;groupId&gt;jakarta.platform&lt;/groupId&gt;<br>  &lt;artifactId&gt;jakarta.jakartaee-api&lt;/artifactId&gt;<br>  &lt;version&gt;9.0.0-M3&lt;/version&gt;<br>  &lt;scope&gt;provided&lt;/scope&gt;<br>&lt;/dependency&gt;</code></pre>
+Maven 依存関係記述については、以下の点に注意してください (アプリケーション開発時のエラーで、依存関係記述に問題があるケースは非常に多くみられます)。
+<ul>
+  <li>依存関係記述のスコープ (scope) には provided を指定してください。Jakarta EE ランタイムには API とその実装がすべて組み込まれています。デフォルト値 (compile) ではアプリケーション側でも Jakarta EE API のライブラリーを重複して保持することになります。</li>
+  <li>Jakarta EE を構成する個々の API (Jakarta Persistence、Jakarta Server Faces、等) については、すべて上記 Jakarta EE API に含まれるため、別途依存関係を設定する必要はありません。</li>
+  <li>あまり推奨はしませんが、Jakarta EE API 実装 (Jakarta Persistence 実装のEclipseLink、Jakarta Server Faces 実装の Mojarra、等) 固有の機能を使用したい場合には、それらの依存関係を追加することもできます。その際には、ランタイムに含まれているバージョンを調査して、アプリケーションとランタイムでバージョンがコンフリクトしないように注意してください (ランタイムに含まれていない拡張機能を除き、スコープには provided を指定してください)。</li>
+</ul>
+<p>Maven プロジェクトのテンプレートとしては、IDE が標準で用意しているものの他に、様々な Maven Archetype が用意されています。IDE 提供のテンプレートよりも実践的に作られていますので、是非活用してください。</p>
+<ul>
+  <li><a href="https://github.com/AdamBien/JakartaEE-essentials-archetype">https://github.com/AdamBien/JakartaEE-essentials-archetype</a> (一番のオススメ！) [<a href="https://search.maven.org/artifact/com.airhacks/jakartaee-essentials-archetype/0.0.7/maven-archetype">Maven Central</a>]</li>
+  <li><a href="https://github.com/khasunuma/jakartaee-rest-quickstart-archetype">https://github.com/khasunuma/jakartaee-rest-quickstart-archetype</a> (今回のために作成した簡易的なもの) [<a href="https://search.maven.org/artifact/com.poortoys/jakartaee-rest-quickstart-archetype/8.0.0/maven-archetype">Maven Central</a>]</li>
+</ul>
+<p>※これらの Maven Archetype はすべて Maven Central リポジトリに登録されています。</p>
+<nav>
+[ <a href="index.html">インデックス</a> | <a href="chapter2.html">次の章へ</a> ]
+</nav>
+</body>
+</html>
